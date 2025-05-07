@@ -13,6 +13,10 @@ const pageLink = [
     to: "/todo",
     text: "TODO一覧",
   },
+  {
+    to: "/form",
+    text: "複数フォーム検証",
+  },
 ];
 
 export default function Home() {
