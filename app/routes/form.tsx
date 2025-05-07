@@ -1,6 +1,13 @@
 
-import { Link, Form, useFetcher } from "react-router";
+import { Link, useFetcher } from "react-router";
 import type { Route } from ".react-router/types/app/routes/+types/form";
+import { z } from "zod";
+
+const commentSchema = z.object({
+  body: z
+    .string({ required_error: "Message is required" })
+    .min(5, "Message is too short")
+});
 
 const TODO_ID = 1;
 const COMMENT_ID = 1;
@@ -48,12 +55,20 @@ export const loader = async () => {
   return { todo: todoResponse, comment: commentResponse };
 };
 
+type ActionResult =
+  | {
+      payload: Record<string, unknown>;
+      formErrors: string[];
+      fieldErrors: Record<string, string[]>;
+    }
+  | undefined;
+
 /**
  * フォーム値送信
  */
-export async function action({ request }: Route.ActionArgs) {
+export async function action({ request }: Route.ActionArgs): Promise<ActionResult> {
   const formData = await request.formData();
-  const intent = formData.get('intent');
+  const intent = formData.get("intent");
 
   // todo の更新の場合
   if (intent === "todo") {
@@ -63,20 +78,50 @@ export async function action({ request }: Route.ActionArgs) {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(updates),
-    })
-      .then((res) => res.json())
+    }).then((res) => res.json());
   }
 
   // comment の更新の場合
   if (intent === "comment") {
-    const updates = Object.fromEntries(formData);
+    const formValues = Object.fromEntries(formData);
+    // バリデーションチェック
+    const validResult = commentSchema.safeParse(formValues);
 
-    return await fetch(`https://dummyjson.com/comments/${COMMENT_ID}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(updates),
-    })
-      .then((res) => res.json())
+    console.log("validResult", validResult);
+
+    // バリデーションエラーがある場合はエラーを返す
+    if (!validResult.success) {
+      const error = validResult.error.flatten();
+
+      console.log("error", error);
+
+      return {
+        payload: formValues,
+        formErrors: error.formErrors,
+        fieldErrors: error.fieldErrors,
+      };
+    }
+
+    const response = await fetch(
+      `https://dummyjson.com/comments/${COMMENT_ID}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formValues),
+      }
+    ).then((res) => res.json());
+
+    // 送信時にエラーがあった場合ここでエラーを返す
+    if (!response) {
+      return {
+        payload: formValues,
+        formErrors: ["Failed!"],
+        fieldErrors: {},
+      };
+    }
+
+    // リダイレクトがある場合はここでリダイレクトする
+    // return redirect('/');
   }
 }
 
@@ -86,7 +131,11 @@ export async function action({ request }: Route.ActionArgs) {
 export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
   const { todo, comment } = loaderData;
 
-  const fetcher = useFetcher();
+  const fetcher = useFetcher<ActionResult>();
+  const actionResult = fetcher.data;
+
+  console.log("actionResult", fetcher.data);
+
 
   return (
     <main>
@@ -115,7 +164,7 @@ export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
           <fetcher.Form method="post">
             <input
               type="checkbox"
-              name="completed"  
+              name="completed"
               defaultChecked={todo.completed}
             />
 
@@ -131,7 +180,9 @@ export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
             コメント更新
           </h2>
 
-          <p className={"text-white"}>{`comment: ${comment.body}`}</p>
+          <div>
+            <p className={"text-white"}>{`comment: ${comment.body}`}</p>
+          </div>
 
           <fetcher.Form method="post">
             <input
@@ -140,6 +191,14 @@ export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
               defaultValue={comment.body}
               className="border border-gray-300 rounded-md p-2"
             />
+            <div className="text-red-500">
+              {actionResult?.fieldErrors?.body.map((message) => (
+                <span>{message}</span>
+              ))}
+            </div>
+
+            <div className="text-red-500">{actionResult?.formErrors}</div>
+
             <button
               type="submit"
               name="intent"
