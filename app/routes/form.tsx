@@ -2,6 +2,11 @@
 import { Link, useFetcher } from "react-router";
 import type { Route } from ".react-router/types/app/routes/+types/form";
 import { z } from "zod";
+import {
+  Checkbox,
+  TextField,
+  Input,
+} from "react-aria-components";
 
 const commentSchema = z.object({
   body: z
@@ -158,15 +163,22 @@ export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
           <h2 className="text-2xl font-bold text-gray-800 dark:text-gray-100 p-3">
             Todo更新
           </h2>
-
-          <p className={"text-white"}>{`todo completed: ${todo.completed}`}</p>
-
           <fetcher.Form method="post">
-            <input
-              type="checkbox"
+            <p
+              className={"text-white"}
+            >{`todo completed: ${todo.completed}`}</p>
+            <Checkbox
+              className="group/checkbox text-white"
+              defaultSelected={todo.completed}
               name="completed"
-              defaultChecked={todo.completed}
-            />
+            >
+              <span
+                className={
+                  "group-data-[selected=true]/checkbox:before:content-['☑︎'] before:content-['☐']"
+                }
+              />
+              <span>{todo.todo}</span>
+            </Checkbox>
 
             <button type="submit" name="intent" value="todo" className="block">
               変更
@@ -185,17 +197,14 @@ export const MultiForm = ({ loaderData }: Route.ComponentProps) => {
           </div>
 
           <fetcher.Form method="post">
-            <input
-              type="text"
-              name="body"
-              defaultValue={comment.body}
-              className="border border-gray-300 rounded-md p-2"
-            />
-            <div className="text-red-500">
-              {actionResult?.fieldErrors?.body.map((message) => (
-                <span>{message}</span>
-              ))}
-            </div>
+            <TextField name="body" defaultValue={comment.body}>
+              <Input className={'border border-white p-1 w-full'} />
+              <div className="text-red-500">
+                {actionResult?.fieldErrors?.body.map((message) => (
+                  <span>{message}</span>
+                ))}
+              </div>
+            </TextField>
 
             <div className="text-red-500">{actionResult?.formErrors}</div>
 
