@@ -5,6 +5,7 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useNavigation,
 } from "react-router";
 
 import type { Route } from "./+types/root";
@@ -31,6 +32,9 @@ export const links: Route.LinksFunction = () => [
  * @memo 全ページに適用されるため、特定のページに依存しない内容を記述する
  */
 export function Layout({ children }: { children: React.ReactNode }) {
+  const navigation = useNavigation();
+  const isLoading = navigation.state === "loading";
+
   return (
     <html lang="en">
       <head>
@@ -42,6 +46,12 @@ export function Layout({ children }: { children: React.ReactNode }) {
         <Links />
       </head>
       <body>
+        {/* ローディング中表示 */}
+        {isLoading && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-white opacity-30">
+            loading...
+          </div>
+        )}
         {/* 子ルートレンダリング */}
         {children}
         {/* クライアント側の遷移のスクロール位置を管理 */}
